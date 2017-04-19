@@ -88,5 +88,10 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# PyCharm stuff
 .idea/
+
+# HDF5 files
+*.h5
+*.hdf5
 
