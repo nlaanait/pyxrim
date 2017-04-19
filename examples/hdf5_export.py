@@ -31,12 +31,14 @@ Created on 4/18/17
 import pyxrim as px
 import os
 
-# define data paths
+# define data absolute paths
 datadir = os.path.join(os.getcwd(),'data')
 specfile = os.path.join(datadir,'BFO_STO_1_1.spec')
 imagedir = os.path.join(datadir,'images')
 
 # load ioHDF5
 io = px.ioHDF5('test.h5')
+# export scans to HDF5 with image stack as 3D numpy array h5 dataset and spec info as attributes of h5 datset
 io.scans_export(specfile,imagedir)
+# close the h5 file
 io.close()
