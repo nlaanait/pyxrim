@@ -37,11 +37,16 @@ import time
 import sys
 import os
 import numpy as np
+from warnings import warn
 from copy import deepcopy, copy
-
-# from pyspec.spec import SpecDataFile
 from skimage.io import ImageCollection
 from skimage.data import imread
+
+
+
+#########################
+# Begin: pyspec classes #
+#########################
 
 """
 Utility Functions for pyspec-based classes,
@@ -64,11 +69,7 @@ def splitSpecString(ips):
 
     return ops
 
-#########################
-# Begin: pyspec classes #
-#########################
-
-class SpecDataFile:
+class SpecDataFile(object):
     """ DataFile class for handling spec data files. Adapted from pyspec (by S. B. Wilkins)"""
 
     def __init__(self, fn, **kwargs):
@@ -91,12 +92,12 @@ class SpecDataFile:
 
         self.index()
         self.readHeader()
-        print self.getStats()
+        print(self.getStats())
 
         self.scandata = {}
 
         self.fileStats = os.stat(self.filename)
-        print self.fileStats
+        print(self.fileStats)
         self.fileLastAccess = self.fileStats.st_mtime
 
 
@@ -117,11 +118,11 @@ class SpecDataFile:
 
         if mode == 'concatenate':
             self.mode = 'concat'
-            print "**** Multiple scans will be concatenated."
+            print("**** Multiple scans will be concatenated.")
             return
         elif mode == 'bin':
             self.mode = 'bin'
-            print "**** Multiple scans will be binned."
+            print("**** Multiple scans will be binned.")
             return
         else:
             raise Exception("Unknown mode %s" % mode)
@@ -137,8 +138,7 @@ class SpecDataFile:
 
         self.file = open(self.filename, 'rb')
 
-        if __verbose__:
-            print "---- Reading Header."
+        print("---- Reading Header.")
 
         self.motors = []
         self.file.seek(0, 0)
@@ -146,16 +146,7 @@ class SpecDataFile:
         while line[0:2] != "#S":
             if line[0:2] == "#O":
                 self.motors = self.motors + splitSpecString(line[4:])
-            else:
-                # Run user extensions
-                for ext in self.userExtensions:
-                    ext.parseSpecHeader(self, line)
-
             line = self.file.readline()
-
-        for ext in self.userExtensions:
-            ext.postProcessSpecHeader(self)
-
         self.file.close()
         return
 
@@ -183,13 +174,13 @@ class SpecDataFile:
                 a = line.split()
                 s = int(a[1])
                 if (s % 5) is 0:
-                    print "\b\b\b\b\b\b\b%5d " % s,
+                    print("\b\b\b\b\b\b\b%5d " % s)
                     sys.stdout.flush()
                 self.findex[s] = pos
             pos = self.file.tell()
             line = self.file.readline()
-        print "\b\b\b\b\b\b\bDONE  "
-
+        # print("\b\b\b\b\b\b\bDONE  ")
+        print("DONE!")
         self.file.close()
         return
 
@@ -319,12 +310,11 @@ class SpecDataFile:
         """Read line from datafile"""
 
         line = self.file.readline()
-        if 0x10:
-            print("xxxx %s" % line.strip())
+        # if 0x10:
+        #     # print("xxxx %s" % line.strip())
         return line
 
-
-class SpecScan:
+class SpecScan(object):
     """Class defining a SPEC scan
 
     This class defines a single spec scan, or a collection of scans either binned or concatenated.
@@ -373,10 +363,7 @@ class SpecScan:
         self.setkeys = setkeys
 
         line = specfile._getLine()
-
-        if __verbose__:
-            print "---- %s" % line.strip()
-
+        print("---- %s" % line.strip())
         sline = line.strip().split()
 
         self.scan = int(sline[1])
@@ -388,16 +375,12 @@ class SpecScan:
 
         x = 0
         self.values = {}
-        self.data = array([])
+        self.data = np.array([])
 
-        self.UB = eye(3)
+        self.UB = np.eye(3)
 
         line = specfile._getLine()
         self.header = self.header + line
-
-        # Run the init for any user extensions
-        for ext in specfile.userExtensions:
-            ext.initSpecScan(self)
 
         # Finally overide any assigments with values passed as keyword arguments
         for arg in kwargs:
@@ -412,7 +395,7 @@ class SpecScan:
                 # Motor positions
                 pos = line.strip().split()
                 for i in range(1, len(pos)):
-                    self.scandata.setValue(removeIllegals(specfile.motors[x]), array([float(pos[i])]))
+                    self.scandata.setValue(removeIllegals(specfile.motors[x]), np.array([float(pos[i])]))
                     x += 1
 
             elif line[0:2] == "#C":
@@ -421,24 +404,24 @@ class SpecScan:
 
             elif line[0:2] == "#D":
                 try:
-                    self.scandate = strptime(line[2:].strip())
+                    self.scandate = time.strptime(line[2:].strip())
                 except:
                     self.scandate = None
             elif line[0:3] == "#G4":
                 try:
                     pos = line[3:].strip().split()
-                    self.Qvec = array([float(pos[0]), float(pos[1]), float(pos[2])])
-                    self.alphabeta = array([float(pos[4]), float(pos[5])])
+                    self.Qvec = np.array([float(pos[0]), float(pos[1]), float(pos[2])])
+                    self.alphabeta = np.array([float(pos[4]), float(pos[5])])
                     self.wavelength = float(pos[3])
                     self.energy = 12398.4 / self.wavelength
                     self.omega = float(pos[6])
                     self.azimuth = float(pos[7])
                 except:
-                    print "**** Unable to read geometry information (G4)"
+                    print("**** Unable to read geometry information (G4)")
             elif line[0:3] == "#G1":
                 try:
                     pos = line[3:].strip().split()
-                    pos = array(map(float, pos))
+                    pos = np.array(map(float, pos))
 
                     self.Lattice = pos[0:6]
                     self.RLattice = pos[6:12]
@@ -450,20 +433,16 @@ class SpecScan:
                     self.or0Lambda = pos[-2]
                     self.or1Lambda = pos[-1]
                 except:
-                    print "**** Unable to read geometry information (G1)"
+                    print("**** Unable to read geometry information (G1)")
 
             elif line[0:3] == "#G3":
                 try:
                     pos = line[3:].strip().split()
-                    pos = array(map(float, pos))
+                    pos = np.array(map(float, pos))
 
                     self.UB = pos.reshape(-1, 3)
                 except:
-                    print "**** Unable to read UB matrix (G3)"
-            else:
-                # Try using the user extensions to parse the lines
-                for ext in specfile.userExtensions:
-                    ext.parseSpecScanHeader(self, line)
+                    print("**** Unable to read UB matrix (G3)")
 
             line = specfile._getLine()
             self.header = self.header + line
@@ -471,26 +450,26 @@ class SpecScan:
         if line[0:2] == "#L":
             # Comment line just before data
             self.cols = splitSpecString(line[3:])
-            print "---- %s" % line.strip()
+            # print("---- %s" % line.strip())
 
         line = specfile._getLine()
         self.header = self.header + line
 
-        print "---- %s" % line.strip()
+        # print("---- %s" % line.strip())
 
         while (line[0:2] != "#S") & (line != "") & (line[0:4] != "# CM"):
             if line[0] != "#":
-                datum = array([])
+                datum = np.array([])
                 d = line.strip().split()
                 if len(d) != 0:
                     for i in range(len(d)):
-                        v = array([float(d[i])])
-                        datum = concatenate((datum, v), 1)
+                        v = np.array([float(d[i])])
+                        datum = np.concatenate((datum, v), 0)
 
                     if self.data.size == 0:
                         self.data = datum
                     else:
-                        self.data = vstack((self.data, datum))
+                        self.data = np.vstack((self.data, datum))
 
             elif line[0:2] == '#C':
                 self.comments = self.comments + line
@@ -503,25 +482,17 @@ class SpecScan:
             self.data = np.array([self.data])
 
         if mask is not None:
-            if __verbose__:
-                print "---- Removing rows %s from data." % str(mask)
+            print("---- Removing rows %s from data." % str(mask))
             self.data = np.delete(self.data, mask, axis=0)
 
         self.scanno = np.ones(self.data.shape[0], dtype=np.int) * self.scan
-        self.scandatum = arange(self.data.shape[0])
-
-        # Run the extension post processing scripts
-
-        for ext in specfile.userExtensions:
-            if __verbose__:
-                print "---- Using extension %s" % ext.getName()
-            ext.postProcessSpecScanHeader(self)
+        self.scandatum = np.arange(self.data.shape[0])
 
         # Now set the motors
         self._setcols()
 
-        if __verbose__:
-            print "---- Data is %i rows x %i cols." % (self.data.shape[0], self.data.shape[1])
+
+        print("---- Data is %i rows x %i cols." % (self.data.shape[0], self.data.shape[1]))
 
         return None
 
@@ -531,7 +502,7 @@ class SpecScan:
                 if len(self.data.shape) == 2:
                     self.scandata.setValue(self.cols[i], self.data[:, i])
                 else:
-                    self.scandata.setValue(self.cols[i], array([self.data[i]]))
+                    self.scandata.setValue(self.cols[i], np.array([self.data[i]]))
             self.values = self.scandata.values
 
             # Now set the variables into the scan class from the data
@@ -539,17 +510,17 @@ class SpecScan:
             if self.setkeys:
                 for i in self.scandata.values.keys():
                     iri = removeIllegals(i)
-                    if __verbose__ & 0x02:
-                        print "oooo Setting variable %s (%s)" % (i, iri)
+                    # if 0x02:
+                    #     # print("oooo Setting variable %s (%s)" % (i, iri))
                     setattr(self, iri, self.scandata.values[i])
 
     def concatenate(self, a):
         # Could put check in here for cols matching ?!?
 
         self.header = self.header + a.header
-        self.data = vstack((self.data, a.data))
-        self.scanno = concatenate((self.scanno, a.scanno))
-        self.scandatum = concatenate((self.scandatum, a.scandatum))
+        self.data = np.vstack((self.data, a.data))
+        self.scanno = np.concatenate((self.scanno, a.scanno))
+        self.scandatum = np.concatenate((self.scandatum, a.scandatum))
 
         for ext in self.datafile.userExtensions:
             ext.concatenateSpecScan(self, a)
@@ -636,23 +607,21 @@ class SpecScan:
         y = self.data[:, ycol]
         m = self.data[:, mcol]
 
-        e = sqrt(y) / y
+        e = np.sqrt(y) / y
         y = y / m
         e = e * y
 
         return (y, e)
 
-
-class SpecData:
-    """Class defining the data contained in a scan"""
-
+class SpecData(object):
+    """Class defining the data contained in a scan """
     def __init__(self):
         self.values = {}
 
     def setValue(self, key, data, setdata=True):
         self.values[key] = data
-        if __verbose__ & 0x20:
-            print "oooo Setting key %s" % key
+        # if 0x20:
+        #     # print("oooo Setting key %s" % key)
 
     def get(self, key):
         if self.values.has_key(key):
@@ -699,5 +668,55 @@ class SpecData:
         return p
 
 #########################
-# End: pyspec classes #
+# End: pyspec classes   #
 #########################
+
+class SpecScanStack(object):
+    ''' This class takes a scan in a spec file and binds both its images and
+    scan information into a single object known as the specScanStack.
+    The images are held in the skimage.io.ImageCollection, and read as needed,
+    and the spec scan object can be accessed through one of the methods.
+    '''
+
+    def __init__(self, ImageDir, SpecFilePath):
+        '''
+        :param ImageDir: String
+                    Absolute file path of directory where images scan folders are found.
+        :param specFilePath: String
+                    Absolute file path of spec file.
+        '''
+
+        self.specFile = SpecFilePath.split(os.sep)[-1]
+        if os.path.exists(SpecFilePath):
+            self.SpecFilePath = SpecFilePath
+            self.specData = SpecDataFile(self.SpecFilePath)
+        else:
+            warn('Spec File not found! Exiting...')
+            sys.exit(IOError)
+        if os.path.exists(ImageDir):
+            self.dir = os.path.join(ImageDir, self.specFile.split('.')[0])
+        else:
+            warn('Image Directory not found! Exiting...')
+            sys.exit(IOError)
+
+    def setScan(self, scanNumber):
+        self.scanNumber = int(scanNumber)
+
+    def getData(self):
+        # Loading scan spec data.
+        scan = self.specData[self.scanNumber]
+
+        # Reading scan images.
+        stackDirectory = os.path.join(self.dir,'S{:03d}'.format(self.scanNumber))
+        time.sleep(0.75)
+        print('Reading images in %s'%stackDirectory)
+        images = ImageCollection(stackDirectory + os.sep + '*.tif')
+        stack = np.array([imp for imp in images])
+        print('Found %d images with dimensions: %s\n'%(stack.shape[0], format(stack.shape[1:])))
+
+        # Checking dimensions of scan and # of images.
+        if stack.shape[0] is not scan.data.shape[0]:
+            message = '# of images: %d and # of points: %d in scan %s%03d do not match!'%(stack.shape[0],scan.data.shape[0],'S',self.scanNumber)
+            warn(message)
+            raise IndexError
+        return scan,stack
