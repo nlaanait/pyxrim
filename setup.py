@@ -12,7 +12,7 @@ with open(os.path.join(here, 'README.md')) as f:
 if on_rtd:
     requirements = ['psutil', 'xlrd>=1.0.0']
 else:
-    requirements =['pyqtgraph>=0.10',
+    requirements =[
                    'h5py>=2.6.0', 'matplotlib',
                    'scikit-learn>=0.17.1', 'xlrd>=1.0.0',
                    'psutil', 'scikit-image>=0.12.3', 'scipy>=0.17.1',

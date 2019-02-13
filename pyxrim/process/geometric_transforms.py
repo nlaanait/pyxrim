@@ -13,7 +13,7 @@ from skimage.transform import warp, SimilarityTransform
 from skimage.measure import ransac
 import h5py
 import multiprocess as mp
-from PyXRIM.misc import *
+from misc import *
 
 class geoTransformer(object):
     ''' This object contains methods to perform geometric transformations on 
